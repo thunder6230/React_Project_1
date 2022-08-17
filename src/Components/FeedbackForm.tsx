@@ -1,9 +1,9 @@
-import React, {ChangeEvent, FC, useContext, useEffect, useState} from "react";
+import React, { FC, useContext, useEffect, useState} from "react";
 import RatingSelect from "./RatingSelect";
 import Button from "./shared/Button";
 import Card from "./shared/Card";
 
-import type {IFeedbackItem, INewFeedback} from "../Interfaces";
+import type { INewFeedback } from "../Interfaces";
 import { FeedbackContext } from "./context/FeedbackContext";
 
 const FeedbackForm: FC = () => {
@@ -40,7 +40,7 @@ const { addFeedback, feedbackEdit, updateFeedback } = useContext(FeedbackContext
       addFeedback(data);
     }
       setText("");
-      setRating(0)
+      setRating(10)
   };
 
   const loadFeedbackInForm = () => {

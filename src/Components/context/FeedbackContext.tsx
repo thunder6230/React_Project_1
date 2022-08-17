@@ -1,15 +1,16 @@
 import {IEditFeedbackItem, IFeedbackItem, INewFeedback} from "../../Interfaces";
-import {createContext, FC, useState} from "react";
+import {createContext, FC, useEffect, useState} from "react";
+import axios from "axios";
 
 interface AppContextState {
     feedback: IFeedbackItem[];
-    feedbackEdit: IEditFeedbackItem | null
+    feedbackEdit: IEditFeedbackItem
     openedFeedbackId: number;
     addFeedback: (data: INewFeedback) => void,
     deleteFeedback: (id: number) => void
     editFeedback: (item: IFeedbackItem) => void
     updateFeedback: (id:number, item: INewFeedback) => void
-
+    isLoading: boolean
 
 }
 
@@ -20,46 +21,55 @@ interface Props {
 export const FeedbackContext = createContext<Partial<AppContextState>>({});
 
 export const FeedbackContextProvider: FC<Props> = ({children}) => {
-    const [feedbackEdit, setFeedbackEdit] = useState<IEditFeedbackItem | null>({
+    const [isLoading, setIsLoading] = useState<boolean>(false)
+    const [feedback, setFeedback] = useState<IFeedbackItem[]>([]);
+    const [feedbackEdit, setFeedbackEdit] = useState<IEditFeedbackItem>({
         item: null,
         edit: false
     })
-    const [feedback, setFeedback] = useState([
-        {
-            id: 1,
-            text: "This is feedback item 1",
-            rating: 5,
-        }, {
-            id: 2,
-            text: "This is feedback item 2",
-            rating: 7,
-        }, {
-            id: 3,
-            text: "This is feedback item 3",
-            rating: 9,
-        },
-    ]);
+
     const editFeedback = (item: IFeedbackItem) => {
         setFeedbackEdit({
             item: item,
             edit: true
         })
     }
-    const deleteFeedback = (id: number): void => {
+
+    useEffect(() => {getAllFeedback()},[])
+    const getAllFeedback:() => Promise<void> = async () => {
+        setIsLoading(true)
+        const params = {
+            _order: "desc",
+            _sort: "id"
+        }
+        const response = await axios.get<IFeedbackItem[]>("/feedback", {params: params})
+        setFeedback(response.data)
+        setIsLoading(false)
+    }
+    const deleteFeedback = async (id: number) => {
         if (window.confirm("Are you sure you want to delete?")) {
-            setFeedback(feedback.filter((item) => item.id !== id));
+            const response = await axios.delete<IFeedbackItem>(`/feedback/${id}`)
+            if(response.status === 200) setFeedback(feedback.filter((item: IFeedbackItem) => item.id !== id));
         }
     };
-    const addFeedback = (newFeedback: INewFeedback) => {
-        const newFeedbackWithId = {...newFeedback, id: feedback.length + 1}
-        setFeedback(oldState => [newFeedbackWithId, ...oldState])
+    const addFeedback = async (newFeedback: INewFeedback) => {
+        const params = {
+            rating: newFeedback.rating,
+            text: newFeedback.text
+        }
+        // const newFeedbackWithId = {...newFeedback, id: feedback.length + 1}
+        const response = await axios.post<IFeedbackItem>("/feedback",params)
+        setFeedback( (oldState: IFeedbackItem[]) => [response.data, ...oldState] )
+        // setFeedback(oldState => [newFeedbackWithId, ...oldState])
     }
-    const updateFeedback = (id:number, editedItem: INewFeedback) => {
-        setFeedback(feedback.map(item => item.id === id ?  {...item, ...editedItem} : item))
+    const updateFeedback = async (id:number, editedItem: INewFeedback) => {
+        const response = await axios.put(`/feedback/${id}`, editedItem)
+        const {data} = response
+        if(response.status === 200)  setFeedback(feedback.map(item => item.id === id ?  {...item, ...data} : item))
     }
 
     return (
-        <FeedbackContext.Provider value={{feedback, addFeedback, deleteFeedback, editFeedback, feedbackEdit, updateFeedback  }}>
+        <FeedbackContext.Provider value={{feedback, addFeedback, deleteFeedback, editFeedback, feedbackEdit, updateFeedback, isLoading  }}>
             {children}
         </FeedbackContext.Provider>
     );
